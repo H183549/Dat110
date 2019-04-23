@@ -1,9 +1,6 @@
 package no.hvl.dat110.file;
 
-/**
- * @author tdoy
- * dat110 - demo/exercise
- */
+
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -108,7 +105,7 @@ public class FileManager extends Thread {
 			if(node != null) {
 				Message message = node.getFilesMetadata().get(keyID);
 				
-				if(message != null && checkDuplicateActiveNode(meldinger, message)) {
+				if(message != null && !checkDuplicateActiveNode(meldinger, message)) {
 					meldinger.add(message);
 					
 				}
@@ -162,11 +159,11 @@ public class FileManager extends Thread {
 		// set the active nodes holding replica files in the contact node
 		// (setActiveNodesForFile)
 		
-		node.setActiveNodesForFile(activenodes);
+		chordnode.setActiveNodesForFile(activenodes);
 
 		// set the NodeIP in the message (replace ip with )
 		
-		message.setNodeIP(chordnode.getNodeIP());
+		message.setNodeIP(node.getNodeIP());
 
 		// send a request to a node and get the voters decision
 		
@@ -183,14 +180,14 @@ public class FileManager extends Thread {
 		// if majority votes
 
 		if (message.isAcknowledged()) {
-			chordnode.acquireLock();
+			node.acquireLock();
 
-			Operations op = new Operations(chordnode, message, activenodes);
+			Operations op = new Operations(node, message, activenodes);
 			op.performOperation();
 
 			op.multicastReadReleaseLocks();
 
-			chordnode.releaseLocks();
+			node.releaseLocks();
 		}
 		
 		// acquire lock to CS and also increments localclock
@@ -238,11 +235,11 @@ public class FileManager extends Thread {
 
 		// set the NodeIP in the message (replace ip with )
 		
-		message.setNodeIP(chordnode.getNodeIP());
+		message.setNodeIP(node.getNodeIP());
 
 		// send a request to a node and get the voters decision
 		
-		boolean result = chordnode.requestWriteOperation(message);
+		boolean result = node.requestWriteOperation(message);
 
 		// put the decision back in the message
 
@@ -250,14 +247,14 @@ public class FileManager extends Thread {
 		
 		// multicast voters' decision to the rest of the nodes
 		
-		chordnode.multicastVotersDecision(message);
+		node.multicastVotersDecision(message);
 
 		// if majority votes
 		
 		if (message.isAcknowledged()) {
-			chordnode.acquireLock();
+			node.acquireLock();
 
-			Operations op = new Operations(chordnode, message, activenodes);
+			Operations op = new Operations(node, message, activenodes);
 			op.performOperation();
 
 			try {
@@ -268,7 +265,7 @@ public class FileManager extends Thread {
 
 			op.multicastReadReleaseLocks();
 
-			chordnode.releaseLocks();
+			node.releaseLocks();
 		}
 
 		// acquire lock to CS and also increments localclock

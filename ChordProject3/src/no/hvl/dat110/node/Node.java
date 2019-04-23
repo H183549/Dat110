@@ -289,7 +289,6 @@ public class Node extends UnicastRemoteObject implements ChordNodeInterface {
 	public void releaseLocks() throws RemoteException {
 		CS_BUSY = false;
 		WANTS_TO_ENTER_CS = false;
-		incrementclock();
 	}
 	
 	public boolean requestWriteOperation(Message message) throws RemoteException {
@@ -339,7 +338,7 @@ public class Node extends UnicastRemoteObject implements ChordNodeInterface {
 	
 		synchronized(queueACK){
 			queueACK.clear();
-			for(int i=0;i<replicas.size();i++) {
+			for(int i=0;i<replicas.size()/2+1;i++) {
 			String nodeip = replicas.get(i).getNodeIP();
 			String nodeid = replicas.get(i).getNodeID().toString();
 			try {
@@ -364,23 +363,20 @@ public class Node extends UnicastRemoteObject implements ChordNodeInterface {
 				incrementclock();
 				// Hint: for all 3 cases, use Message to send GRANT or DENY. e.g. message.setAcknowledgement(true) = GRANT
 				
-				Message reply= new Message();
-				reply.setNodeIP(nodeIP);
-				reply.setNodeID(nodeID);
-				reply.setClock(counter);
+			
 				/**
 				 *  case 1: Receiver is not accessing shared resource and does not want to: GRANT, acquirelock and reply
 				 */
 				if(!WANTS_TO_ENTER_CS&&!CS_BUSY) {
-					reply.setAcknowledged(true);
+					message.setAcknowledged(true);
 					acquireLock();
-					return reply;
+					return message;
 				/**
 				 *  case 2: Receiver already has access to the resource: DENY and reply
 				 */
 				}else if(CS_BUSY) {
-					reply.setAcknowledged(false);
-					return reply;	
+					message.setAcknowledged(false);
+					return message;	
 				
 				
 				/**
@@ -389,9 +385,12 @@ public class Node extends UnicastRemoteObject implements ChordNodeInterface {
 				 */
 				}else if(WANTS_TO_ENTER_CS) {
 					if(counter>message.getClock()) {
-						reply.setAcknowledged(true);
+						message.setAcknowledged(true);
 						acquireLock();
-						return reply;
+						return message;
+					}else {
+						message.setAcknowledged(false);
+						return message;
 					}
 					
 				}
@@ -415,7 +414,7 @@ public class Node extends UnicastRemoteObject implements ChordNodeInterface {
 				n++;
 			}
 		}
-				
+		queueACK.clear();
 		return y>n;		// change this to the result of the vote
 	}
 
